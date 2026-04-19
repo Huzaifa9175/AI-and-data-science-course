@@ -1,4 +1,3 @@
-
 #PART 1
 import numpy as np
 # Python list
@@ -104,4 +103,3 @@ ravel[0] = 200
 
 print("Original after flatten:", a)  # no change
 print("Original after ravel:", a)    # changes
-
