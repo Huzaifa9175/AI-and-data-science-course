@@ -1,0 +1,158 @@
+{
+  "name": "Supervisor Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "a1a1a1a1-0001-4a1a-8a1a-000000000001",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [-460, 0],
+      "webhookId": "supervisor-chat-trigger"
+    },
+    {
+      "parameters": {
+        "promptType": "auto",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "You are the Supervisor Agent for an AI Email Assistant.\n\nYour job is to read the user's request and decide which tool to use:\n\n1. If the user wants to SEND an email, READ emails, SUMMARIZE an email, or REPLY to an email -> call the \"Email_Assistant_Workflow\" tool. Pass the user's full instruction as the input so the Email Agent inside that workflow can decide whether to send, read, or reply.\n2. If the user wants to SEARCH for information on the web (facts, news, general knowledge) -> call the \"SerpAPI\" tool.\n\nAlways pick exactly one tool per request unless the user clearly asks for two things (e.g. \"search X and then email me the answer\"), in which case call the tools in sequence.\n\nAfter the tool returns a result, summarize it back to the user in a clear, friendly way. Do not invent information that the tools did not return."
+        }
+      },
+      "id": "a1a1a1a1-0002-4a1a-8a1a-000000000002",
+      "name": "Supervisor Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [-200, 0]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {}
+      },
+      "id": "a1a1a1a1-0003-4a1a-8a1a-000000000003",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [-300, 220],
+      "credentials": {
+        "openAiApi": {
+          "id": "PUT_YOUR_OPENAI_CREDENTIAL_ID_HERE",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.sessionId }}",
+        "contextWindowLength": 10
+      },
+      "id": "a1a1a1a1-0004-4a1a-8a1a-000000000004",
+      "name": "Window Buffer Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [-150, 220]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "a1a1a1a1-0005-4a1a-8a1a-000000000005",
+      "name": "SerpAPI",
+      "type": "@n8n/n8n-nodes-langchain.toolSerpApi",
+      "typeVersion": 1,
+      "position": [0, 220],
+      "credentials": {
+        "serpApi": {
+          "id": "PUT_YOUR_SERPAPI_CREDENTIAL_ID_HERE",
+          "name": "SerpApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "PUT_EMAIL_WORKFLOW_ID_HERE",
+          "mode": "list",
+          "cachedResultName": "Email Workflow"
+        },
+        "description": "Use this tool for ANY request related to email: sending a new email, reading/showing/summarizing emails, or replying to an existing email. Pass the user's full natural-language instruction as the 'task' input.",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "task": "={{ $fromAI('task', 'The full natural language instruction from the user about what to do with email, e.g. \"read my latest email\" or \"reply to Ali and confirm the meeting\"', 'string') }}"
+          }
+        }
+      },
+      "id": "a1a1a1a1-0006-4a1a-8a1a-000000000006",
+      "name": "Email_Assistant_Workflow",
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2,
+      "position": [150, 220]
+    }
+  ],
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Supervisor Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Supervisor Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Supervisor Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SerpAPI": {
+      "ai_tool": [
+        [
+          {
+            "node": "Supervisor Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email_Assistant_Workflow": {
+      "ai_tool": [
+        [
+          {
+            "node": "Supervisor Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

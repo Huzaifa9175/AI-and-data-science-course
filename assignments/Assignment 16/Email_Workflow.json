@@ -1,0 +1,200 @@
+{
+  "name": "Email Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "task"
+            }
+          ]
+        }
+      },
+      "id": "b2b2b2b2-0001-4b2b-8b2b-000000000001",
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [-460, 0]
+    },
+    {
+      "parameters": {
+        "promptType": "auto",
+        "text": "={{ $json.task }}",
+        "options": {
+          "systemMessage": "You are the Email Agent. You manage the user's Gmail inbox using three tools:\n\n1. Gmail_Send_Email - use when the user wants to compose and send a brand new email to someone.\n2. Gmail_Read_Emails - use when the user wants to read, list, show, or summarize emails (e.g. \"read my latest email\", \"show unread emails\", \"what emails did I get today\", \"summarize my newest email\", \"read the email from Ali\"). When summarizing, write a short 1-2 sentence summary of the body content, and always mention the sender (From) and Subject.\n3. Gmail_Reply_Email - use when the user wants to reply to an email that already exists. First make sure you know which message to reply to: if the user hasn't specified, use the most recently read or most recent message ID from Gmail_Read_Emails. Compose a polite, appropriate reply based on what the user asked you to say, then send it with this tool.\n\nWorkflow for 'read then reply' requests: call Gmail_Read_Emails first to get the message ID and content, then call Gmail_Reply_Email using that message ID.\n\nAlways respond to the Supervisor with a clear, structured summary of what you did (e.g. 'Reply sent successfully' plus the message text, or the email details found), formatted the same way as in the assignment's example outputs."
+        }
+      },
+      "id": "b2b2b2b2-0002-4b2b-8b2b-000000000002",
+      "name": "Email Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [-200, 0]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {}
+      },
+      "id": "b2b2b2b2-0003-4b2b-8b2b-000000000003",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [-350, 260],
+      "credentials": {
+        "openAiApi": {
+          "id": "PUT_YOUR_OPENAI_CREDENTIAL_ID_HERE",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "id": "b2b2b2b2-0004-4b2b-8b2b-000000000004",
+      "name": "Window Buffer Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [-200, 260]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $fromAI('To', 'The recipient email address', 'string') }}",
+        "subject": "={{ $fromAI('Subject', 'The email subject line', 'string') }}",
+        "message": "={{ $fromAI('Message', 'The full email body content', 'string') }}",
+        "options": {}
+      },
+      "id": "b2b2b2b2-0005-4b2b-8b2b-000000000005",
+      "name": "Gmail_Send_Email",
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [-30, 260],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "PUT_YOUR_GMAIL_OAUTH2_CREDENTIAL_ID_HERE",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": "={{ $fromAI('Limit', 'How many emails to retrieve, e.g. 1 for latest, 5 for several, 10 for unread list', 'number') }}",
+        "filters": {
+          "q": "={{ $fromAI('SearchQuery', 'Gmail search query to filter results. Examples: \"is:unread\" for unread emails, \"from:ali\" to filter by sender name, \"newer_than:1d\" for emails received today, or leave empty for the latest emails overall', 'string') }}"
+        },
+        "options": {
+          "downloadAttachments": false
+        }
+      },
+      "id": "b2b2b2b2-0006-4b2b-8b2b-000000000006",
+      "name": "Gmail_Read_Emails",
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [120, 260],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "PUT_YOUR_GMAIL_OAUTH2_CREDENTIAL_ID_HERE",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "reply",
+        "messageId": "={{ $fromAI('MessageId', 'The Gmail message ID of the email being replied to. This should come from a previous Gmail_Read_Emails call in this conversation.', 'string') }}",
+        "message": "={{ $fromAI('ReplyMessage', 'The full reply body content to send back to the sender', 'string') }}",
+        "options": {}
+      },
+      "id": "b2b2b2b2-0007-4b2b-8b2b-000000000007",
+      "name": "Gmail_Reply_Email",
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [270, 260],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "PUT_YOUR_GMAIL_OAUTH2_CREDENTIAL_ID_HERE",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail_Send_Email": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail_Read_Emails": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail_Reply_Email": {
+      "ai_tool": [
+        [
+          {
+            "node": "Email Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
