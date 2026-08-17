@@ -1,167 +1,47 @@
-# 🚦 SafeRoad AI — Seatbelt Violation Detection System
+🚀 AI License Plate Detection System
 
-Detects seatbelt violations in images/video using YOLOv8, extracts license plate numbers with OCR, logs violations to PostgreSQL, and displays everything in a Streamlit dashboard.
+Built an AI-powered License Plate Detection web app using:
 
----
+⚡ YOLOv8
+⚡ EasyOCR
+⚡ OpenCV
+⚡ Gradio
+⚡ Hugging Face Spaces
 
-## Architecture
+This project detects vehicles in uploaded videos, extracts license plate regions, performs OCR recognition, and generates processed output videos with real-time annotations.
 
-```
-Input Image/Video
-       ↓
- YOLOv8 Model 1  ──────────────────────────────────────────────
- (Seatbelt Detection)                                          │
-   ├── Person_with_seatbelt    → mark as compliant             │
-   └── Person_without_seatbelt → flag as violator              │
-                                      ↓                        │
-                         YOLOv8 Model 2                        │
-                         (License Plate Detection)             │
-                              ↓                                │
-                    Find nearest plate to violator             │
-                              ↓                                │
-                    Crop plate region                          │
-                              ↓                                │
-                    Tesseract OCR → extract text               │
-                              ↓                                │
-                    PostgreSQL (violations table)              │
-                              ↓                                │
-                    Streamlit UI dashboard ←─────────────────── ┘
-```
+🔍 Features:
 
----
+* Vehicle detection using YOLOv8
+* Automatic license plate localization
+* OCR-based text extraction
+* Bounding box visualization
+* Video processing pipeline
+* Interactive Gradio web interface
+* Deployable on Hugging Face Spaces
 
-## Quick Start
+🛠 Tech Stack:
 
-### 1. Clone & install dependencies
+* Python
+* Ultralytics YOLOv8
+* EasyOCR
+* OpenCV
+* Gradio
 
-```bash
-git clone <repo>
-cd seatbelt_violation_system
+📌 Future Improvements:
 
-pip install -r requirements.txt
+* Custom-trained license plate detector
+* Real-time webcam detection
+* Vehicle tracking system
+* Faster OCR pipeline
+* Advanced plate recognition accuracy
 
-# Install Tesseract binary
-sudo apt install tesseract-ocr          # Ubuntu/Debian
-# brew install tesseract                # macOS
-```
+This project helped me explore:
 
-### 2. Download datasets and train models
+* Computer Vision
+* Object Detection
+* OCR Systems
+* AI Deployment
+* Video Processing Pipelines
 
-```bash
-# Get your Roboflow API key from https://app.roboflow.com
-
-# Train seatbelt detection model
-python train/train_models.py \
-    --task seatbelt \
-    --api_key YOUR_ROBOFLOW_KEY \
-    --epochs 50 \
-    --imgsz 640
-
-# Train license plate detection model
-python train/train_models.py \
-    --task plate \
-    --api_key YOUR_ROBOFLOW_KEY \
-    --epochs 50 \
-    --imgsz 640
-```
-
-Best weights are saved to:
-- `runs/train/seatbelt_yolov8/weights/best.pt`
-- `runs/train/plate_yolov8/weights/best.pt`
-
-Copy them to the `models/` directory:
-```bash
-cp runs/train/seatbelt_yolov8/weights/best.pt models/seatbelt_yolov8.pt
-cp runs/train/plate_yolov8/weights/best.pt    models/license_plate_yolov8.pt
-```
-
-### 3. Set up PostgreSQL (optional)
-
-```sql
-CREATE DATABASE saferoad;
-```
-
-The app creates the `violations` table automatically on first connection.
-
-### 4. Run the Streamlit app
-
-```bash
-streamlit run app.py
-```
-
-Open http://localhost:8501 in your browser.
-
----
-
-## Connecting Real Models
-
-In `app.py`, replace the `mock_detect()` call with the real detector:
-
-```python
-# At the top of app.py, add:
-from models.detector import SeatbeltDetector, annotate
-
-detector = SeatbeltDetector(
-    seatbelt_model_path="models/seatbelt_yolov8.pt",
-    plate_model_path="models/license_plate_yolov8.pt",
-    conf_threshold=0.60,
-)
-
-# Replace mock_detect(img_np) with:
-detections = detector.detect(img_np)
-annotated  = annotate(img_np, detections)
-```
-
----
-
-## Database Schema
-
-```sql
-CREATE TABLE violations (
-    id             SERIAL PRIMARY KEY,
-    plate_number   TEXT,
-    violation_type TEXT        DEFAULT 'No Seatbelt',
-    confidence     REAL,
-    timestamp      TIMESTAMPTZ DEFAULT NOW(),
-    image_name     TEXT,
-    frame_number   INT
-);
-```
-
----
-
-## Dataset Links
-
-| Dataset | URL |
-|---------|-----|
-| Seatbelt Detection | https://universe.roboflow.com/renuka-ed2ia/seat-belt-detection-c2nia |
-| License Plate | https://universe.roboflow.com/manasa-n-n/car-license-plate-detection-maehj |
-
----
-
-## Project Structure
-
-```
-seatbelt_violation_system/
-├── app.py                   ← Streamlit UI (main entry point)
-├── requirements.txt
-├── README.md
-├── models/
-│   ├── detector.py          ← SeatbeltDetector class (YOLO + OCR)
-│   ├── seatbelt_yolov8.pt   ← trained weights (add after training)
-│   └── license_plate_yolov8.pt
-├── db/
-│   └── database.py          ← ViolationDB class (PostgreSQL)
-└── train/
-    └── train_models.py      ← training + validation scripts
-```
-
----
-
-## Deployment on HuggingFace Spaces
-
-1. Create a new Space → SDK: Streamlit
-2. Upload all files
-3. Add `requirements.txt` (HuggingFace installs automatically)
-4. Set `DB_URL` as a Space secret for PostgreSQL connection
-5. Update `app.py` to read: `db_url = os.environ.get("DB_URL", "")`
+#AI #MachineLearning #ComputerVision #YOLO #DeepLearning #Python #OpenCV #OCR #Gradio #HuggingFace #LicensePlateDetection
